@@ -1,0 +1,48 @@
+<div class="full-width-container">
+  <table border="1" id="csvTable"></table>
+</div>
+  
+
+<style> 
+.full-width-container {
+  width: 95vw !important;  /* Full viewport width */
+  margin-left: calc(-1 * (100vw - 133%)/2); /* Center aligns */
+  padding: 0 !important;
+}
+
+#csvTable {
+  width: auto;
+  max-width: 90% !important;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+#csvTable th, #csvTable td {
+  border: 1px solid black;
+  padding: 8px;
+  text-align: left;
+}
+</style>
+
+<script>
+fetch('https://cdn.shopify.com/s/files/1/0810/6944/1217/files/Results_LiftingCast__reduced_ac80280c-6c34-439b-9782-a03372167779.csv?v=1743552083')
+  .then(response => response.text())
+  .then(data => {
+    let rows = data.split("\n");
+    let table = document.getElementById("csvTable");
+
+    rows.forEach((row, index) => {
+      let tr = document.createElement("tr");
+      row.split(",").forEach(cell => {
+        let td = document.createElement(index === 0 ? "th" : "td");
+        
+        // truncating decimals to 2 places (if number)
+        let num = parseFloat(cell.trim());
+        td.textContent = (!isNaN(num) && cell.includes(".")) ? num.toFixed(2).replace(/\.00$/, '') : cell.trim(); 
+        
+        tr.appendChild(td);
+      });
+      table.appendChild(tr);
+    });
+  });
+</script>
