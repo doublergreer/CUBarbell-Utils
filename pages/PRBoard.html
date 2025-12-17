@@ -4,8 +4,6 @@
   </div>
 </div>
 
-
-
 <style>
 @media (max-width: 768px) {
   #csvTable {
@@ -34,14 +32,13 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* Keep table wider than viewport if needed */
+/* Table styling */
 #csvTable {
   width: max-content;
   max-width: 100%;
   border-collapse: collapse;
   table-layout: auto;
   border-radius: 8px;
-  /* overflow: hidden; */
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
@@ -50,42 +47,97 @@
   border: 1px solid #ddd;
   padding: 10px 14px;
   text-align: left;
-  white-space: nowrap; /* prevents ugly wrapping on mobile */
+  white-space: nowrap;
 }
 
+/* Sortable header styles */
 #csvTable th {
   font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
 }
 
-/* #csvTable tr:hover {
-  background-color: #f9f9f9;
-} */
+#csvTable th::after {
+  content: " ↕";
+  font-size: 0.75em;
+  opacity: 0.6;
+}
+
+#csvTable th.sort-asc::after {
+  content: " ↑";
+}
+
+#csvTable th.sort-desc::after {
+  content: " ↓";
+}
 </style>
 
-
 <script>
-// Replace with your Google Sheets export link:
-const googleSheetsCSV = "https://docs.google.com/spreadsheets/d/1mkU6r6YKaEeG1tqgrQfA0SluCg4g_MNeKSGBjmEyFdk/export?format=csv&id=1mkU6r6YKaEeG1tqgrQfA0SluCg4g_MNeKSGBjmEyFdk&gid=0";
-
+const googleSheetsCSV =
+  "https://docs.google.com/spreadsheets/d/1mkU6r6YKaEeG1tqgrQfA0SluCg4g_MNeKSGBjmEyFdk/export?format=csv&id=1mkU6r6YKaEeG1tqgrQfA0SluCg4g_MNeKSGBjmEyFdk&gid=0";
 
 fetch(googleSheetsCSV)
-.then(response => response.text())
-.then(data => {
-let rows = data.split("\n");
-let table = document.getElementById("csvTable");
+  .then(response => response.text())
+  .then(data => {
+    const rows = data.trim().split("\n");
+    const table = document.getElementById("csvTable");
 
+    rows.forEach((row, index) => {
+      const tr = document.createElement("tr");
 
-rows.forEach((row, index) => {
-let tr = document.createElement("tr");
-row.split(",").forEach(cell => {
-  let td = document.createElement(index === 0 ? "th" : "td");
-  let num = parseFloat(cell.trim());
-  td.textContent = (!isNaN(num) && cell.includes(".")) ? num.toFixed(2).replace(/\.00$/, '') : cell.trim();
-  tr.appendChild(td);
-});
-table.appendChild(tr);
-});
-})
-.catch(error => console.error("Error loading sheet:", error));
+      row.split(",").forEach(cell => {
+        const isHeader = index === 0;
+        const td = document.createElement(isHeader ? "th" : "td");
+
+        const trimmed = cell.trim();
+        const num = parseFloat(trimmed);
+
+        td.textContent =
+          !isNaN(num) && trimmed.match(/^-?\d+(\.\d+)?$/)
+            ? num.toFixed(2).replace(/\.00$/, "")
+            : trimmed;
+
+        tr.appendChild(td);
+      });
+
+      table.appendChild(tr);
+    });
+
+    makeTableSortable(table);
+  })
+  .catch(error => console.error("Error loading sheet:", error));
+
+function makeTableSortable(table) {
+  const headers = table.querySelectorAll("th");
+  const directions = Array(headers.length).fill(true);
+
+  headers.forEach((header, columnIndex) => {
+    header.addEventListener("click", () => {
+      const rows = Array.from(table.querySelectorAll("tr")).slice(1);
+      const ascending = directions[columnIndex] = !directions[columnIndex];
+
+      headers.forEach(h => h.classList.remove("sort-asc", "sort-desc"));
+      header.classList.add(ascending ? "sort-asc" : "sort-desc");
+
+      rows.sort((a, b) => {
+        const aText = a.children[columnIndex].textContent.trim();
+        const bText = b.children[columnIndex].textContent.trim();
+
+        const aNum = parseFloat(aText);
+        const bNum = parseFloat(bText);
+
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return ascending ? aNum - bNum : bNum - aNum;
+        }
+
+        return ascending
+          ? aText.localeCompare(bText, undefined, { numeric: true })
+          : bText.localeCompare(aText, undefined, { numeric: true });
+      });
+
+      rows.forEach(row => table.appendChild(row));
+    });
+  });
+}
 </script>
-
