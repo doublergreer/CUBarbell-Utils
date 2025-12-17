@@ -1,0 +1,91 @@
+<div class="table-container">
+  <div class="table-scroll">
+    <table border="1" id="csvTable"></table>
+  </div>
+</div>
+
+
+
+<style>
+@media (max-width: 768px) {
+  #csvTable {
+    min-width: 600px;
+  }
+}
+
+@media (min-width: 1024px) {
+  #csvTable th,
+  #csvTable td {
+    white-space: normal;
+  }
+}
+
+.table-container {
+  width: 100%;
+  max-width: 1000px;
+  margin: 40px auto;
+  padding: 20px;
+}
+
+/* Horizontal scroll wrapper */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Keep table wider than viewport if needed */
+#csvTable {
+  width: max-content;
+  max-width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  border-radius: 8px;
+  /* overflow: hidden; */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+#csvTable th,
+#csvTable td {
+  border: 1px solid #ddd;
+  padding: 10px 14px;
+  text-align: left;
+  white-space: nowrap; /* prevents ugly wrapping on mobile */
+}
+
+#csvTable th {
+  font-weight: bold;
+}
+
+/* #csvTable tr:hover {
+  background-color: #f9f9f9;
+} */
+</style>
+
+
+<script>
+// Replace with your Google Sheets export link:
+const googleSheetsCSV = "https://docs.google.com/spreadsheets/d/1mkU6r6YKaEeG1tqgrQfA0SluCg4g_MNeKSGBjmEyFdk/export?format=csv&id=1mkU6r6YKaEeG1tqgrQfA0SluCg4g_MNeKSGBjmEyFdk&gid=0";
+
+
+fetch(googleSheetsCSV)
+.then(response => response.text())
+.then(data => {
+let rows = data.split("\n");
+let table = document.getElementById("csvTable");
+
+
+rows.forEach((row, index) => {
+let tr = document.createElement("tr");
+row.split(",").forEach(cell => {
+  let td = document.createElement(index === 0 ? "th" : "td");
+  let num = parseFloat(cell.trim());
+  td.textContent = (!isNaN(num) && cell.includes(".")) ? num.toFixed(2).replace(/\.00$/, '') : cell.trim();
+  tr.appendChild(td);
+});
+table.appendChild(tr);
+});
+})
+.catch(error => console.error("Error loading sheet:", error));
+</script>
+
