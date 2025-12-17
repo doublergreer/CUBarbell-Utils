@@ -1,9 +1,9 @@
 <div class="toggle-wrapper">
   <div class="toggle">
-    <button class="toggle-option active" data-value="option1">
+    <button class="toggle-option active" data-value="lbs">
       lbs
     </button>
-    <button class="toggle-option" data-value="option2">
+    <button class="toggle-option" data-value="kg">
       kg
     </button>
   </div>
@@ -64,7 +64,7 @@
 }
 
 /* When second option is active */
-.toggle[data-active="option2"]::before {
+.toggle[data-active="kg"]::before {
   transform: translateX(100%);
 }
     
@@ -140,6 +140,8 @@
 const toggle = document.querySelector(".toggle");
 const options = document.querySelectorAll(".toggle-option");
 
+let conversionFactor = 2.2;
+
 options.forEach(option => {
   option.addEventListener("click", () => {
     options.forEach(o => o.classList.remove("active"));
@@ -147,8 +149,8 @@ options.forEach(option => {
 
     toggle.setAttribute("data-active", option.dataset.value);
 
-    // 🔥 Hook into your logic here
-    console.log("Selected:", option.dataset.value);
+    if (option.dataset.value === "kg") conversionFactor = 2.2046226218;
+    else conversionFactor = 1;
   });
 });
 
@@ -169,7 +171,8 @@ fetch(googleSheetsCSV)
         const td = document.createElement(isHeader ? "th" : "td");
 
         const trimmed = cell.trim();
-        const num = parseFloat(trimmed);
+        const num = parseFloat(trimmed) / conversionFactor;
+
 
         td.textContent =
           !isNaN(num) && trimmed.match(/^-?\d+(\.\d+)?$/)
