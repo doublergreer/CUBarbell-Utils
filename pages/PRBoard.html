@@ -1,3 +1,14 @@
+<div class="toggle-wrapper">
+  <div class="toggle">
+    <button class="toggle-option active" data-value="option1">
+      lbs
+    </button>
+    <button class="toggle-option" data-value="option2">
+      kg
+    </button>
+  </div>
+</div>
+
 <div class="table-container">
   <div class="table-scroll">
     <table border="1" id="csvTable"></table>
@@ -5,6 +16,58 @@
 </div>
 
 <style>
+.toggle-wrapper {
+  display: flex;
+  justify-content: right;
+  margin: 20px 0;
+}
+
+.toggle {
+  display: flex;
+  background: #eee;
+  border-radius: 999px;
+  padding: 4px;
+  position: relative;
+  width: fit-content;
+}
+
+.toggle-option {
+  border: none;
+  background: transparent;
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #555;
+  position: relative;
+  z-index: 2;
+  transition: color 0.2s ease;
+}
+
+.toggle-option.active {
+  color: #fff;
+}
+
+/* Sliding background */
+.toggle::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: 45%;
+  background: rgba(138, 138, 167, 0.733);
+  border-radius: 999px;
+  transition: transform 0.25s ease;
+  z-index: 1;
+}
+
+/* When second option is active */
+.toggle[data-active="option2"]::before {
+  transform: translateX(100%);
+}
+    
 @media (max-width: 768px) {
   #csvTable {
     min-width: 600px;
@@ -74,6 +137,21 @@
 </style>
 
 <script>
+const toggle = document.querySelector(".toggle");
+const options = document.querySelectorAll(".toggle-option");
+
+options.forEach(option => {
+  option.addEventListener("click", () => {
+    options.forEach(o => o.classList.remove("active"));
+    option.classList.add("active");
+
+    toggle.setAttribute("data-active", option.dataset.value);
+
+    // 🔥 Hook into your logic here
+    console.log("Selected:", option.dataset.value);
+  });
+});
+
 const googleSheetsCSV =
   "https://docs.google.com/spreadsheets/d/1mkU6r6YKaEeG1tqgrQfA0SluCg4g_MNeKSGBjmEyFdk/export?format=csv&id=1mkU6r6YKaEeG1tqgrQfA0SluCg4g_MNeKSGBjmEyFdk&gid=0";
 
