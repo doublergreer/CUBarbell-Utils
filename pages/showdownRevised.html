@@ -1,0 +1,254 @@
+<div class="toggle-wrapper">
+  <div class="toggle">
+    <button class="toggle-option active" data-value="lbs">
+      lbs
+    </button>
+    <button class="toggle-option" data-value="kg">
+      kg
+    </button>
+  </div>
+</div>
+
+<div class="table-container">
+  <div class="table-scroll">
+    <table border="1" id="csvTable"></table>
+  </div>
+</div>
+
+<style>
+.toggle-wrapper {
+  display: flex;
+  justify-content: right;
+  margin: 20px 0;
+}
+
+.toggle {
+  display: flex;
+  background: #eee;
+  border-radius: 999px;
+  padding: 4px;
+  position: relative;
+  width: fit-content;
+}
+
+.toggle-option {
+  border: none;
+  background: transparent;
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #555;
+  position: relative;
+  z-index: 2;
+  transition: color 0.2s ease;
+}
+
+.toggle-option.active {
+  color: #fff;
+}
+
+/* Sliding background */
+.toggle::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: 45%;
+  background: rgba(138, 138, 167, 0.733);
+  border-radius: 999px;
+  transition: transform 0.25s ease;
+  z-index: 1;
+}
+
+/* When second option is active */
+.toggle[data-active="kg"]::before {
+  transform: translateX(100%);
+}
+    
+@media (max-width: 768px) {
+  #csvTable {
+    min-width: 600px;
+  }
+}
+
+@media (min-width: 1024px) {
+  #csvTable th,
+  #csvTable td {
+    white-space: normal;
+  }
+}
+
+.table-container {
+  width: 100%;
+  max-width: 1000px;
+  margin: 40px auto;
+  padding: 20px;
+}
+
+/* Horizontal scroll wrapper */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Table styling */
+#csvTable {
+  width: max-content;
+  max-width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+#csvTable th,
+#csvTable td {
+  border: 1px solid #ddd;
+  padding: 10px 14px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* Sortable header styles */
+#csvTable th {
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+#csvTable th::after {
+  content: " ↕";
+  font-size: 0.75em;
+  opacity: 0.6;
+}
+
+#csvTable th.sort-asc::after {
+  content: " ↑";
+}
+
+#csvTable th.sort-desc::after {
+  content: " ↓";
+}
+</style>
+
+<script>
+const toggle = document.querySelector(".toggle");
+const options = document.querySelectorAll(".toggle-option");
+
+const COLUMNS_OF_INTEREST = new Set([
+  'Name', 'Gender', 'Place', 'Team', 'Awards Division', 'Age',
+  'Body Weight (lbs)', 'Dots Points',
+  'Squat 1', 'Squat 2', 'Squat 3',
+  'Bench 1', 'Bench 2', 'Bench 3',
+  'Deadlift 1', 'Deadlift 2', 'Deadlift 3',
+  'Total'
+]);
+const UNIT_INDEPENDENT_COLUMNS = new Set(["Place", "Age", "Dots Points"]);
+
+const resultsCSV = "https://cdn.shopify.com/s/files/1/0810/6944/1217/files/Results_LiftingCast_in.csv?v=1743388389"
+
+let conversionFactor = 1;
+
+options.forEach(option => {
+  option.addEventListener("click", () => {
+    options.forEach(o => o.classList.remove("active"));
+    option.classList.add("active");
+
+    toggle.setAttribute("data-active", option.dataset.value);
+
+    conversionFactor =
+      option.dataset.value === "kg" ? 2.2046226218 : 1;
+
+    document.querySelectorAll("#csvTable td[data-raw-value]").forEach(td => {
+        const raw = parseFloat(td.dataset.rawValue);
+        const colIndex = parseInt(td.dataset.colIndex, 10);
+        td.textContent = formatValue(raw, headers[colIndex]);
+    });
+  });
+});
+
+fetch(resultsCSV)
+  .then(response => response.text())
+  .then(data => {
+    const rows = data.trim().split("\n");
+    const table = document.getElementById("csvTable");
+
+    headers = rows[0].split(",").map(h => h.trim());
+
+    rows.forEach((row, index) => {
+      const tr = document.createElement("tr");
+
+      row.split(",").forEach((cell, columnIndex) => {
+        if (COLUMNS_OF_INTEREST.has(headers[columnIndex])){          
+          const isHeader = index === 0;
+          const td = document.createElement(isHeader ? "th" : "td");
+
+          const trimmed = cell.trim();
+          const rawNum = parseFloat(trimmed);
+
+          if (!isNaN(rawNum) && trimmed.match(/^-?\d+(\.\d+)?$/)) {
+              td.dataset.rawValue = rawNum;
+              td.dataset.colIndex = columnIndex;
+              td.textContent = formatValue(rawNum, headers[columnIndex]);
+          } else {
+              td.textContent = trimmed;
+          }
+
+
+          tr.appendChild(td);
+        }
+      });
+
+      table.appendChild(tr);
+    });
+
+    makeTableSortable(table);
+  })
+  .catch(error => console.error("Error loading sheet:", error));
+
+function formatValue(value, columnName) {
+    if (UNIT_INDEPENDENT_COLUMNS.has(columnName))
+        return value
+  
+    const converted = value / conversionFactor;
+    return converted.toFixed(2).replace(/\.00$/, "");
+}
+
+function makeTableSortable(table) {
+  const headers = table.querySelectorAll("th");
+  const directions = Array(headers.length).fill(true);
+
+  headers.forEach((header, columnIndex) => {
+    header.addEventListener("click", () => {
+      const rows = Array.from(table.querySelectorAll("tr")).slice(1);
+      const ascending = directions[columnIndex] = !directions[columnIndex];
+
+      headers.forEach(h => h.classList.remove("sort-asc", "sort-desc"));
+      header.classList.add(ascending ? "sort-asc" : "sort-desc");
+
+      rows.sort((a, b) => {
+        const aText = a.children[columnIndex].textContent.trim();
+        const bText = b.children[columnIndex].textContent.trim();
+
+        const aNum = parseFloat(aText);
+        const bNum = parseFloat(bText);
+
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return ascending ? aNum - bNum : bNum - aNum;
+        }
+
+        return ascending
+          ? aText.localeCompare(bText, undefined, { numeric: true })
+          : bText.localeCompare(aText, undefined, { numeric: true });
+      });
+
+      rows.forEach(row => table.appendChild(row));
+    });
+  });
+}
+</script>
