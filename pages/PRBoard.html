@@ -140,7 +140,12 @@
 const toggle = document.querySelector(".toggle");
 const options = document.querySelectorAll(".toggle-option");
 
-let conversionFactor = 2.2;
+const UNIT_INDEPENDENT_COLUMNS = new Set(["Pull Ups", "Dips"]);
+
+const googleSheetsCSV =
+  "https://docs.google.com/spreadsheets/d/1mkU6r6YKaEeG1tqgrQfA0SluCg4g_MNeKSGBjmEyFdk/export?format=csv&id=1mkU6r6YKaEeG1tqgrQfA0SluCg4g_MNeKSGBjmEyFdk&gid=0";
+
+let conversionFactor = 1;
 
 options.forEach(option => {
   option.addEventListener("click", () => {
@@ -149,13 +154,16 @@ options.forEach(option => {
 
     toggle.setAttribute("data-active", option.dataset.value);
 
-    if (option.dataset.value === "kg") conversionFactor = 2.2046226218;
-    else conversionFactor = 1;
+    conversionFactor =
+      option.dataset.value === "kg" ? 2.2046226218 : 1;
+
+    document.querySelectorAll("#csvTable td[data-raw-value]").forEach(td => {
+        const raw = parseFloat(td.dataset.rawValue);
+        const colIndex = parseInt(td.dataset.colIndex, 10);
+        td.textContent = formatValue(raw, headers[colIndex]);
+    });
   });
 });
-
-const googleSheetsCSV =
-  "https://docs.google.com/spreadsheets/d/1mkU6r6YKaEeG1tqgrQfA0SluCg4g_MNeKSGBjmEyFdk/export?format=csv&id=1mkU6r6YKaEeG1tqgrQfA0SluCg4g_MNeKSGBjmEyFdk&gid=0";
 
 fetch(googleSheetsCSV)
   .then(response => response.text())
@@ -163,21 +171,26 @@ fetch(googleSheetsCSV)
     const rows = data.trim().split("\n");
     const table = document.getElementById("csvTable");
 
+    headers = rows[0].split(",").map(h => h.trim());
+
     rows.forEach((row, index) => {
       const tr = document.createElement("tr");
 
-      row.split(",").forEach(cell => {
+      row.split(",").forEach((cell, columnIndex) => {
         const isHeader = index === 0;
         const td = document.createElement(isHeader ? "th" : "td");
 
         const trimmed = cell.trim();
-        const num = parseFloat(trimmed) / conversionFactor;
+        const rawNum = parseFloat(trimmed);
 
+        if (!isNaN(rawNum) && trimmed.match(/^-?\d+(\.\d+)?$/)) {
+            td.dataset.rawValue = rawNum;
+            td.dataset.colIndex = columnIndex;
+            td.textContent = formatValue(rawNum, headers[columnIndex]);
+        } else {
+            td.textContent = trimmed;
+        }
 
-        td.textContent =
-          !isNaN(num) && trimmed.match(/^-?\d+(\.\d+)?$/)
-            ? num.toFixed(2).replace(/\.00$/, "")
-            : trimmed;
 
         tr.appendChild(td);
       });
@@ -188,6 +201,14 @@ fetch(googleSheetsCSV)
     makeTableSortable(table);
   })
   .catch(error => console.error("Error loading sheet:", error));
+
+function formatValue(value, columnName) {
+    if (UNIT_INDEPENDENT_COLUMNS.has(columnName))
+        return value
+  
+    const converted = value / conversionFactor;
+    return converted.toFixed(2).replace(/\.00$/, "");
+}
 
 function makeTableSortable(table) {
   const headers = table.querySelectorAll("th");
